@@ -1,0 +1,268 @@
+---
+title: "Simple Linear Regression Models and Analysis of Residuals"
+author: "Valentina Zangirolami (valentina.zangirolami@unimib.it)"
+date: "2023-12-5"
+output:
+  html_document:
+    df_print: paged
+---
+
+***1. Mother and Daughter Heights***
+
+Data involve Mother and Daughter heights (we already used these data for the first exercise).
+
+```{r, include=TRUE}
+#load packages
+require(alr4)
+require(ggplot2)
+#load data
+data("Heights")
+head(Heights)
+```
+
+There are two variables: mheight (mother's height) and dheight (daughter's height). Heights are expressed in inches.
+
+Main summary statistics about the two variables:
+
+```{r, include=TRUE}
+summary(Heights)
+```
+
+```{r, include=TRUE}
+nrow(Heights)
+```
+
+There are 1375 observations.
+
+Our goal: We would like to find out if there exists a relationship between *dheight* and *mheight*
+
+Let's see the scatter plot of the above two variables
+
+```{r, include=TRUE}
+theme_set(theme_bw())  ## sets default white background theme for ggplot
+ggplot(data = Heights, aes(x=mheight, y=dheight)) + geom_point(col="red", alpha = 0.5) + labs(x="Mother's height", y="Daughter's height", title = "Plot Mother and Daughter Heights")
+```
+
+The relationship among variables seems to be linear.
+
+Let's add the regression line
+
+```{r, include=TRUE}
+ggplot(data = Heights, aes(x=mheight, y=dheight)) + geom_point(col="red", alpha = 0.5) + geom_smooth(method = "lm") + 
+  labs(x="Mother's height", y="Daughter's height", title = "Plot Mother and Daughter Heights")
+```
+
+We are interesting in the following regression model $$ dheight = \beta_1 + \beta_2* mheight + \epsilon$$ (check the assumptions in the previous exercises).
+
+**Inference**
+
+Let's estimate the linear regression model
+
+```{r, include=TRUE}
+mod <- lm(dheight ~ mheight, data=Heights)
+summary(mod)
+```
+
+Description of the output:
+
+-   **Residuals:** In the summary, we can find the main statistics about the residual (first line). The median is around zero and the distribution seems to be simmetric.
+-   **Coefficients:** In this section, we have 4 columns (Estimate, Std. Error, t-value, p-value). *Estimate* refers to the estimates of regression coefficients. *Std. Error* is the square root of the estimated variance of each estimator. The *t-value* is the test statistic of t-test with the related p-value.
+
+The estimated regression line can be represented by $$ \hat{dheight} = 29.917 + 0.542*mheight$$ where $\sqrt{\hat{Var}(\hat{\beta}_1)} = 1.6225$ and $\sqrt{\hat{Var}(\hat{\beta}_2)} = 0.026$. Considering the following system of hypothesis $$\begin{cases}
+        \mbox{H0: } \beta_r = 0\\
+        \mbox{H1: } \beta_r \ne 0
+    \end{cases}$$
+
+for $r=1,2$. The t-values for $\beta_1$ and $\beta_2$ are $$t_1^{oss} = \frac{\hat{\beta}_1}{\sqrt{\hat{Var}(\hat{\beta}_1)}} = 18.44$$ $$t_2^{oss} = \frac{\hat{\beta}_2}{\sqrt{\hat{Var}(\hat{\beta}_2)}} = 20.87$$ The p-values of both t-test are less than 0.01: we reject the null hypothesis $\forall r$ (You can also obtain suggestions from R by looking the legend of significance codes).
+
+-   **Goodness of fit**: The last part of the output refers to checking the goodness of fit. In this case, $R^2 = 0.2408$ and then we can also evaluate the F-test. Considering the following system of hypothesis $$\begin{cases}
+        \mbox{H0: } \beta_2 = 0\\
+        \mbox{H1: } \beta_2 \ne 0
+    \end{cases}$$ 
+    
+
+The f-value is $$f^{oss} = t^2_2 = 435.5$$
+
+and the p-value is $\alpha^{oss}= P(F_{1, 1373} > f^{oss}) \approx 0$. We reject the null hypothesis.
+
+The residual standard error corresponds to $\sqrt{SSE/(n-2)}$ where $n-2 = 1373$ (d.o.f.).
+
+**Interpretation of regression coefficients**
+
+-  $\hat{\beta}_1 = 29.91744$: intercept of the regression line. In this case, it does not make sense to consider the case of mheight=0 implying no relevant information from the intercept.
+
+-  $\hat{\beta}_2 = 0.54175$: slope of the regression line. Interpretation: the mean of dheight increases by 0.54175 inches ($\approx$ 1,376045 cm) as the value of mheight increases by one-unit.
+
+
+**Confidence Interval**
+
+Confidence Intervals for $\beta_1$ and $\beta_2$ with 95% confidence level
+
+```{r, include=TRUE}
+confint(mod)
+```
+
+For each $\beta_r$, $r=1,2$, we can compute the confidence interval with $1-\alpha=0.95$ (you can verify the confidence level by looking the first line).
+
+Remember that all of the estimates, intervals, and hypothesis tests arising in a regression analysis have been developed assuming that the model is correct. For this reason, it is important checking
+if the assumptions are reasonable within the data.
+
+**Analysis of Residuals**
+
+```{r, include=TRUE}
+par(mfrow=c(2,2))
+plot(mod)
+```
+
+Comments:
+
+-   **Residual vs Fitted**, is used to understand the relationship between residuals and fitted values. We can observe a constant dispersion of the points (no patterns).
+
+-   **Q-Q Residuals**, is used to verify the Gaussian assumption about errors. The dashed line represents the theoretical Gaussian distribution while the dots the empirical distribution (within our data). The empirical distribution seems to be similar to the theoretical one, which means that the Gaussian assumption of the errors would be reasonable.
+
+-   **Scale-Location**, is used to check the homoscedasticity assumption of errors. In the plot we can observe that there are not patterns. Even the homoscedasticity assumption should be reasonable.
+
+-   **Residuals vs Leverage**, is used to check other issues (such as outliers and leverage points). In our case, no influencial points are detected.
+
+**Prediction with simple linear regression model**
+
+Let consider new data for *mheight*
+
+```{r, include=TRUE}
+new_data <- data.frame(mheight=c(70.4, 60.6, 68, 57.4))
+```
+
+Although the prediction can be computed for any value of mheight, it may be unreliable if the new values are outside the range of mheight. Let's check
+
+```{r, include=TRUE}
+cat('Min:', min(Heights$mheight), 'Max:', max(Heights$mheight))
+```
+
+Each value of new data belongs to (55.4, 70.8).
+
+
+Confidence Interval for the mean of dheight: 
+
+```{r, include=TRUE}
+(prev_ic <- predict(mod, new_data, interval = "confidence"))
+```
+
+For each new data $x^*$, the above confidence interval correspond to:
+
+$$( \hat{y}_* - t_{n-2, 1-\alpha/2} \sqrt{s^2\left(\frac{1}{n} + \frac{(x^*- \bar{x})^2}{\sum_{i=1}^n (x_i - \bar{x})^2}\right)}, \hat{y}_* + t_{n-2, 1-\alpha/2} \sqrt{s^2\left(\frac{1}{n} + \frac{(x^*- \bar{x})^2}{\sum_{i=1}^n (x_i - \bar{x})^2}\right)})$$
+
+where $\hat{y}_*= \hat{\beta}_1 + \hat{\beta}_2x^*$ which can be rewritten $\hat{y}_*= \bar{y} + \hat{\beta}_2(x^*- \bar{x})$.
+
+Plot with the previous confidence interval:
+
+```{r, include=TRUE}
+plot(Heights$mheight, Heights$dheight, xlim=range(new_data$mheight), ylab = "Daughter's Height", xlab = "Mother's Height")
+matlines(new_data$mheight, prev_ic, lty=c(1,2,2), col="violet")
+```
+
+
+
+```{r, include=FALSE}
+rm(list=ls())
+```
+
+***2. Simulated data - Analysis of Residuals***
+
+In the next sections, we are going to explore some cases in which the assumptions related to the linear model are not satisfied from the data. 
+
+To show several behavior, we can start by simulating our data
+
+```{r, include=TRUE}
+set.seed(123)
+x <- sort(runif(50))
+```
+
+**2.1 Issues with the form of the regression model**
+
+The linear regression model is generally defined as $y = \beta_1 + \beta_2 x + \epsilon$ leading to estimate a regression line. However, sometimes the residuals have non-linear patterns.
+
+```{r, include=TRUE}
+y1 <- x^2+rnorm(50,sd=.05)
+y2 <- -x^2+rnorm(50,sd=.05)
+y3 <- (x-.5)^3+rnorm(50,sd=.01)
+
+plot(x,residuals(lm(y1~x)),xlab="X",ylab="residuals")
+plot(x,residuals(lm(y2~x)),xlab="X",ylab="residuals")
+plot(x,residuals(lm(y3~x)),xlab="X",ylab="residuals")
+```
+
+In these cases, we can see a *systematic pattern* which highlights a non-linear pattern.
+Indeed, we know the data generative mechanism and we can see that in the firsts two plot, a quadratic term should be added in the model while in the last plot, the pattern suggests a cubed term.
+
+```{r, include=TRUE}
+par(mfrow=c(2, 2))
+plot(lm(y1~x))
+
+```
+```{r, include=TRUE}
+par(mfrow=c(2, 2))
+plot(lm(y1~poly(x, 2)))
+
+```
+```{r, include=FALSE}
+rm(y1,y2,y3)
+```
+
+**2.2 Issues with Homoscedasticity assumption**
+
+Recall of Homoscedasticity assumption: $Var(\epsilon_i)= \sigma^2 > 0, \quad \forall i$.
+
+```{r, include=TRUE}
+y1 <- x+x*rnorm(50,sd=.03)
+y2 <- x+(1-x)*rnorm(50,sd=.03)
+y3 <- x+c(rnorm(15,sd=.1),rnorm(20,sd=.4),rnorm(15,sd=.02))
+y4 <- x+c(rnorm(20,sd=.5),rnorm(15,sd=.1),rnorm(15,sd=.4))
+
+plot(x,residuals(lm(y1~x)),xlab="X",ylab="residuals")
+plot(x,residuals(lm(y2~x)),xlab="X",ylab="residuals")
+plot(x,residuals(lm(y3~x)),xlab="X",ylab="residuals")
+plot(x,residuals(lm(y4~x)),xlab="X",ylab="residuals")
+```
+
+In the above plots, we can observe a different variability for each range of x values.
+
+```{r, include=FALSE}
+rm(y1,y2,y3,y4)
+```
+
+**2.3 Issues with Gaussian assumption**
+
+Recall of Gaussian assumption: $\epsilon_i \overset{\text{i.i.d.}}{\sim} N(0, \sigma^2)$.
+
+```{r, include=TRUE}
+y1 <- x+.05*rt(50,df=2)
+y2 <- x+.03*(rchisq(50,1)-.5)
+y3 <- x-.03*(rchisq(50,1)-.5)
+y4 <- x+.07*rt(50,df=2)
+
+plot(x,residuals(lm(y1~x)),xlab="X",ylab="residuals")
+plot(x,residuals(lm(y2~x)),xlab="X",ylab="residuals")
+plot(x,residuals(lm(y3~x)),xlab="X",ylab="residuals")
+plot(x,residuals(lm(y4~x)),xlab="X",ylab="residuals")
+```
+
+These plots highlight some issues with the Gaussian assumption of the errors. Let's also check the QQ-plot for the firsts two plot (just for an example).
+
+```{r, include=TRUE}
+qqnorm(residuals(lm(y1~x)), pch = 1, frame = FALSE)
+qqline(residuals(lm(y1~x)), col = "steelblue", lwd = 2)
+
+qqnorm(residuals(lm(y2~x)), pch = 1, frame = FALSE)
+qqline(residuals(lm(y2~x)), col = "steelblue", lwd = 2)
+```
+
+Let assume that we don't know anything about the data generative mechanism, what can we do?
+A way could be to transform our dependent variable, for instance:
+
+```{r, include=TRUE}
+qqnorm(residuals(lm(log(y2)~x)), pch = 1, frame = FALSE)
+qqline(residuals(lm(log(y2)~x)), col = "steelblue", lwd = 2)
+
+qqnorm(residuals(lm(sqrt(y2)~x)), pch = 1, frame = FALSE)
+qqline(residuals(lm(sqrt(y2)~x)), col = "steelblue", lwd = 2)
+```
