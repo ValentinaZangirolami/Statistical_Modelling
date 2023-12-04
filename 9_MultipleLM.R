@@ -10,7 +10,7 @@ library(car)
 require(ggplot2)
 
 #load data
-pkmn <- read.csv("C:/Users/valen/Desktop/PhD/stat_modelling/exercises/pkmn.csv")
+pkmn <- read.csv("pkmn.csv")
 
 #show data
 head(pkmn)
