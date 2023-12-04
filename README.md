@@ -1,3 +1,4 @@
 # Statistical_Modelling
 
-Course: https://laura-dangelo.github.io/statistical_modelling/
+Link of the course: https://laura-dangelo.github.io/statistical_modelling/
+

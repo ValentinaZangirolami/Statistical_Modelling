@@ -1,0 +1,410 @@
+---
+title: "Multiple Linear Regression Models"
+author: "Valentina Zangirolami (valentina.zangirolami@unimib.it)"
+date: "2023-12-19"
+output: html_document
+---
+
+```{r warning=FALSE}
+#load libraries
+library(car)
+library(ggplot2)
+```
+
+```{r, include=TRUE}
+pkmn <- read.csv("pkmn.csv")
+```
+
+![](https://assets.pokemon.com/assets/cms2/img/pokedex/full/025.png){width="10%"} ***Dataset: Pokémon***
+
+Pokémon are creatures either wild or under the coaching direction of Pokémon trainers who exercise their Pokemon in sports manly battle to increase their stats.
+
+```{r, include=TRUE}
+head(pkmn)
+```
+
+Attack, Speed and HP are the base stats for evaluating each pokémon in fights. Total refers to the sum of base stats (Attack, Speed, HP, Special Attack, Special Defence, Defence). Speed determines the timelaps of making the first attack. Type highlights the strength and weakness of pokémon (water wins against fire, etc.). HP means Health points.
+
+At the beginning, we want to exclude the variable *Type*. Therefore, an appropriate regression model is represented by
+
+$$Total_i = \beta_1 + \beta_2 HP_i + \beta_3 Attack_i + \beta_4 Speed_i + \epsilon_i$$ with the following assumptions:
+
+-   $\epsilon_i \overset{\text{i.i.d.}}{\sim} N(0, \sigma^2)$, $i=1, \ldots, 150$
+
+-   Linear independence of covariates
+
+*Question*: In the case of $k \ge 1$ covariates, how can we show graphically the relationship between the response variable *Total* and our covariates?
+
+*Answer*: When we have 2 covariates, the "right" plot should be the 3-dimensional plot. However, the main issue is the lower intepretability and it is just available in the case of 2 covariates. One way would be to represent our data through a Scatter matrix, keeping in mind we are just considering the marginal effect of each independent variable on the response (although with multiple regression we want to explain the combined effect). But it can be used with $k \ge 2$ covariates.
+
+**Scatter plot Matrix**
+
+```{r, include=TRUE}
+Scatter_Matrix <- GGally::ggpairs(pkmn,columns = c(3:6), 
+                          title = "Scatter Plot Matrix for Pokémon Dataset", 
+                          axisLabels = "show") 
+```
+
+```{r  echo=FALSE, results='hide', fig.keep='all', message = FALSE}
+Scatter_Matrix
+```
+
+**Marginal interpretation**
+
+-   Total vs Attack: the relationship among these two variables appears to be linear. Indeed, the linear correlation is really high.
+
+-   Total vs HP: these two variables are less correlated. We can observe that as Total increases the increment of HP is less proportional.
+
+-   Total vs Speed: these two variables are less correlated and the dispersion is increased. However, we can observe that as Speed increases in general Total increases as well.
+
+-   Relationship among independent variables: we can observe that the correlation among independent variables (Attack-Speed, Attack-HP, HP-Speed) is not high, which represents a positive aspect in our case. Indeed, a marked linear dependence between independent variables leads to issues such as in the regression matrix X the corresponding columns are almost linearly dependent (multicollinearity). In the presence of multicollinearity, the estimates may be numerically unstable because the matrix $(X^TX)$ is nearly singular (a matrix is invertible iff it is nonsingular). $\implies$ a good model should not include pairs of highly correlated variables.
+
+```{r, include=TRUE}
+mod <- lm(Total~HP + Attack + Speed, data=pkmn)
+summary(mod)
+```
+
+**Added-Variable Plots**
+
+```{r}
+avPlots(mod)
+```
+
+These plots allow us to visualize the relationship between each individual independent variable and the dependent variable in a model while holding other independent variables constant.
+
+The estimated model corresponds to
+
+$$ \widehat{Total}_i = 25.27971 + 0.25649 HP_i + 4.13193 Attack_i + 0.10078 Speed_i$$
+
+-   **Coefficients:** In this section, we have 4 columns (Estimate, Std. Error, t-value, p-value). *Estimate* refers to the estimates of regression coefficients. *Std. Error* is the square root of the estimated variance of each estimator. The *t-value* is the test statistic of t-test with the related p-value.
+
+The estimated standard errors of each coefficient are $\sqrt{\hat{Var}(\hat{\beta}_1)} = 9.37876$, $\sqrt{\hat{Var}(\hat{\beta}_2)} = 0.08163$, $\sqrt{\hat{Var}(\hat{\beta}_3)} = 0.09544$ and $\sqrt{\hat{Var}(\hat{\beta}_4)} = 0.10813$. Considering the following system of hypothesis $$\begin{cases}
+        \mbox{H0: } \beta_r = 0\\
+        \mbox{H1: } \beta_r \ne 0
+    \end{cases}$$
+
+for $r=1,2,3,4$. The t-values for $\beta_1$, $\beta_2$, $\beta_3$ and $\beta_4$ are
+
+$$t_1^{oss} = \frac{\hat{\beta}_1}{\sqrt{\hat{Var}(\hat{\beta}_1)}} = 2.695$$
+
+$$t_2^{oss} = \frac{\hat{\beta}_2}{\sqrt{\hat{Var}(\hat{\beta}_2)}} = 3.142$$
+
+$$t_3^{oss} = \frac{\hat{\beta}_3}{\sqrt{\hat{Var}(\hat{\beta}_3)}} = 43.295$$
+
+$$t_4^{oss} = \frac{\hat{\beta}_4}{\sqrt{\hat{Var}(\hat{\beta}_4)}} = 0.932$$
+
+**Significance of coefficients**: $\beta_1$ and $\beta_1$ are significant at 1% level. $\beta_3$ is significant for each level of the significance codes. The null hypothesis related to the $t_4$- test is not rejected, which means we can conclude that $\beta_4$ is not significant.
+
+-   **Goodness of fit**: The last part of the output refers to checking the goodness of fit. In this case, $R^2 = 0.2408$ and then we can also evaluate the F-test. Considering the following system of hypothesis $$\begin{cases}
+        \mbox{H0: } \beta_2 = \beta_3 =\beta_4 = 0\\
+        \mbox{H1: } \exists j \mbox{ s.t. }\beta_j \ne 0\mbox{, j=2,3,4}
+    \end{cases}$$
+
+The f-value is $f^{oss} = 888.8$ and the p-value is $\alpha^{oss}= P(F_{3, 146} > f^{oss}) \approx 0$. We reject the null hypothesis.
+
+The residual standard error corresponds to $\sqrt{SSE/(n-4)}$ where $n-4 = 146$ (degree of freedom).
+
+The coefficients of determination correspond to $R^2= 0.9481$ and $R_{(adj)}^2=0.947$. The adjusted-$R^2$ is penalized by the number of covariates.
+
+**Interpretation Coefficients**
+
+-   $\hat{\beta}_1 = 25.28$, the mean of Total stats is equal to 25.28 while keeping the available covariates equal to zero. But it is not particular meaningful, for instance: having HP=0 makes no sense; there cannot be a pokémon without available health points! This situation can be extended to the other variables (Attack and Speed) as well.
+
+-   $\hat{\beta}_2 = 0.26$, the mean of Total stats increases by 0.26 points when HP increases by one point while holding other independent variables constant
+
+-   $\hat{\beta}_3 = 4.13$, the mean of Total stats increases by 4.13 points when Attack increases by one point while holding other independent variables constant
+
+-   $\hat{\beta}_4 = 0.10$, the mean of Total stats increases by 0.10 points when Speed increases by one point while holding other independent variables constant
+
+**Diagnostic plot**
+
+```{r, include=TRUE}
+plot(mod)
+```
+
+Comments:
+
+-   **Residual vs Fitted**: we can observe a slight pattern but it is not really marked
+
+-   **Q-Q Residuals**: highlights a skewed empirical distribution of residuals
+
+-   **Scale-Location**: the homoscedasticity assumption should be reasonable
+
+-   **Residuals vs Leverage**: the observation 52 has an high leverage and we can also observe that there are some outliers (e.g. observation 31). However, these points are not influential for estimates (looking the Cook's distance).
+
+**Test about a subset of regression coefficients**
+
+Let's consider two model:
+
+-   *Restricted Model*
+
+$$\mathcal{M}_1: \quad Total_i = \beta_1 + \beta_2 Attack_i + \epsilon_i$$
+
+-   *Full Model*
+
+$$\mathcal{M}_3: \quad Total_i = \beta_1 + \beta_2 Attack_i + \beta_3 HP_i + \beta_4 Speed_i + \epsilon_i$$
+
+We want to perfom a test with the following system of hypothesis
+
+$$\begin{cases}
+        \mbox{H0: } \beta_3= \beta_4 = 0\\
+        \mbox{H1: } \exists j \in \{3,4\}: \beta_j \ne 0
+    \end{cases}$$
+
+```{r, include=TRUE}
+mod_1 <- lm(Total~Attack, data=pkmn) #restricted model
+anova(mod_1, mod)
+```
+
+**Residual Sum of Squares**
+
+-   $\mathcal{M}_1$: $SSE= 133990$
+
+-   $\mathcal{M}_3$: $SSE= 125388$
+
+**Test statistic**
+
+$$F^{obs}= \frac{(SSE_{\mathcal{M}_1}-SSE_{\mathcal{M}_3})/(p_3 - p_1)}{SSE_{\mathcal{M}_3}/(n- p_3)}= \frac{(133990 - 125388)/(4-2)}{125388/(150-4)}=5.0077$$ and the p-value is $\alpha^{obs}= 0.00788$ $\implies$ We reject our null hypothesis $H0$.
+
+We can also perform a F-test with $H0: \beta_4 = 0$ vs $H0: \beta_4 \ne 0$
+
+```{r, include=TRUE}
+mod_2 <- lm(Total~Attack +HP, data=pkmn) #unconstrained model
+anova(mod_2, mod)
+```
+
+In this case, we cannot reject $H_0$ (as is in the t-test). From this point, we will exclude *Speed*.
+
+```{r, include=FALSE}
+rm(mod, mod_2, Scatter_Matrix)
+```
+
+***ANCOVA***
+
+Now, we want to add the variable *Type* in our model. Let's start by visualizing the marginal relationship between Total and Type
+
+```{r, include=TRUE}
+theme_set(theme_bw())
+ggplot(pkmn, aes(x=Type, y= Total, color=Type)) + 
+        geom_boxplot(outlier.colour="black", outlier.shape=8, outlier.size=4)
+```
+
+Water Pokémon reach higher Total points than Normal Pokémon. We can observe the minimum of Total points is lower for Water Pokémon. In general, Water Pokémon get higher Total points than Normal Pokémon.
+
+**Dependent variable vs Independent variable**
+
+```{r, include=TRUE}
+Scatter_Matrix <- GGally::ggpairs(pkmn,columns = c(2:5), 
+                          title = "Scatter Plot Matrix for Pokémon Dataset", 
+                          axisLabels = "show") 
+```
+
+```{r  echo=FALSE, results='hide', fig.keep='all', message = FALSE}
+Scatter_Matrix
+```
+
+Type vs other independent variables: no strong dependencies.
+
+Let's start by considering the following model
+
+$$Total_i = \beta_1 + \beta_2 Attack_i + \beta_3 D_i + \epsilon_i$$
+
+where
+
+$$D_i = \begin{cases}
+        1,\quad \mbox{ if } Type_i =Water\\
+        0,\quad \mbox{ Otherwise }
+    \end{cases}$$
+
+```{r include=FALSE}
+rm(Scatter_Matrix)
+```
+
+```{r, include=TRUE}
+mod_anc_1 <- lm(Total~Attack +Type, data=pkmn)
+summary(mod_anc_1)
+```
+
+The estimated model corresponds to
+
+$$ \widehat{Total}_i = 27.10802 + 4.24972 Attack_i + 28.28463D_i$$
+
+The two estimated regression line for each Type
+
+```{r warning=FALSE}
+ggplot(pkmn, aes(x=Attack, y=Total, color=Type))+ geom_point() + geom_smooth(method = "lm", aes(fill=Type))
+```
+
+which correspond to
+
+$$ (Normal) \quad \widehat{Total}_i= 27.10802 + 4.24972 Attack_i$$
+
+$$ (Water) \quad \widehat{Total}_i= 55.39265 + 4.24972 Attack_i$$
+
+**Adding an interaction**
+
+```{r, include=TRUE}
+mod_anc_2 <- lm(Total~ Attack + Type + Type:Attack, data=pkmn)
+summary(mod_anc_2)
+```
+
+The estimated model corresponds to
+
+$$ \widehat{Total}_i = 40.7010 + 4.0661 Attack_i + 1.1075D_i + 0.36029 Attack_i \times D_i$$
+
+From the previous output, we can observe that adding the interaction the coefficient related to $D_i$ becomes not significant.
+
+Thus, the two estimated regression line for each Type correspond to
+
+$$ (Normal) \quad \widehat{Total}_i= 40.7010 + 4.0661 Attack_i$$
+
+$$ (Water) \quad \widehat{Total}_i= 41.8085 + 4.42639 Attack_i$$
+
+We can try to evaluate the interaction through F-test
+
+```{r}
+anova(mod_anc_1, mod_anc_2)
+```
+
+We reject $H_0: \mbox{interaction no significant}$ at 5% level of significance.
+
+Let's check $H_0: \mu_W = \mu_N$
+
+```{r}
+anova(mod_1, mod_anc_2)
+```
+
+We reject $H0$: The mean of Total for Water Pokémon differs from the mean of Total for Normal Pokémon.
+
+**Diagnostic plot**
+
+```{r}
+plot(mod_anc_2)
+```
+
+Comments:
+
+-   **Residual vs Fitted**: we can observe a slight pattern but it is not really marked
+
+-   **Q-Q Residuals**: highlights a skewed empirical distribution of residuals
+
+-   **Scale-Location**: the homoscedasticity assumption should be reasonable
+
+-   **Residuals vs Leverage**: No influential points are detected (looking the Cook's distance)
+
+```{r, include=FALSE}
+rm(list=ls())
+```
+
+**ANOVA**
+
+```{r}
+active_data <- read.csv("active.csv")
+head(active_data)
+```
+
+We are interested in finding out if there exists a relationship between *hvltt2*, *group* and *sex*.
+
+
+```{r, include=FALSE}
+active_data$sex <- as.factor(active_data$sex)
+active_data$group <- as.factor(active_data$group)
+```
+
+**Description of our data**
+
+The Advanced Cognitive Training for Independent and Vital Elderly (ACTIVE) trial is designed to determine whether cognitive training interventions (memory, reasoning, and speed of information processing), which have previously been found to be successful at improving mental abilities under laboratory or small-scale field conditions, can affect cognitively based measures of daily functioning.
+
+-   *hvltt2* represents the Hopkins Verbal Learning Test total score
+
+-   *group* contains 4 categories: (1) "Memory", (2) "Reasoning", (3) "Speed", (4) "Control"
+
+-   *sex* is a binary variable: (1) Male, and (2) Female
+
+**Marginal relationship**
+
+```{r, include=TRUE}
+Scatter_Matrix <- GGally::ggpairs(active_data,columns = c(10,6,4), 
+                          title = "Scatter Plot Matrix for Active Dataset", 
+                          axisLabels = "show") 
+```
+
+```{r  echo=FALSE, results='hide', fig.keep='all', message = FALSE}
+Scatter_Matrix
+```
+
+```{r include=FALSE}
+rm(Scatter_Matrix)
+```
+
+**Combined plot**
+
+```{r}
+ggplot(active_data,  aes(x = factor(group), y = hvltt2, fill = factor(sex)))  + geom_bar(stat="identity", position = "dodge", width = 0.7) + labs(x = "Group", y = "Memory performance", fill="Sex")  + scale_x_discrete(breaks=c("1", "2", "3", "4"), labels=c("Memory", "Reasoning", "Speed", "Control")) + scale_fill_discrete(breaks=c("1", "2"), labels=c("Male", "Female"))
+```
+
+In general, we can observe that the memory performance is higher with *Sex*=Female rather than *Sex*=Male. For each *Group*, there is a slight difference in the change of memory performance.
+
+**Linear regression model**
+
+At the beginning, we are interested in estimating a linear regression model as
+
+$$Y_i = \beta_1 + \beta_2 x_{i2}+ \beta_3 x_{i3} + \beta_4 x_{i4} + \beta_5 x_{i5} + \epsilon_i$$
+where $Y_i = hvltt2_i$,
+
+$$x_{i2} = \begin{cases}
+        1,\quad \mbox{ if } Group_i =2\\
+        0,\quad \mbox{ Otherwise }
+    \end{cases} \quad x_{i3} = \begin{cases}
+        1,\quad \mbox{ if } Group_i =3\\
+        0,\quad \mbox{ Otherwise }
+    \end{cases}\quad x_{i4} = \begin{cases}
+        1,\quad \mbox{ if } Group_i =4\\
+        0,\quad \mbox{ Otherwise }
+    \end{cases}$$
+
+and
+
+$$x_{i5} = \begin{cases}
+        1,\quad \mbox{ if } Sex_i =2\\
+        0,\quad \mbox{ Otherwise }
+    \end{cases}$$
+
+
+```{r}
+model<-lm(hvltt2~group +sex,data=active_data)
+summary(model)
+```
+
+The estimated regression model corresponds to
+
+$$\widehat{Y}_i = 24.6908 - 1.5657 x_{i2} - 1.2290 x_{i3} - 1.8429 x_{i4} + 1.8019 x_{i5}$$
+
+where the averages for Group-Male are $\mu_{A-M} = 24.6908$, $\mu_{B-M} = 23.1251$, $\mu_{C-M} = 23.4618$, and $\mu_{D-M} = 22.8479$; the averages for Group-Female are $\mu_{A-F} = 26.4927$, $\mu_{B-F} = 24.927$, $\mu_{C-F} = 25.2637$, and $\mu_{D-F} = 24.6498$.
+
+Using the t-test for each regression coefficient, we can conclude that we reject $H_0$ (i.e. each coefficient is significant). 
+
+The value of $R^2 = 0.039$ (and, in this case, almost equivalent $R_{adj}^2$) is near to zero, which means that our model is not good (btw, we are considering a simple case to study ANOVA).
+
+**Evaluating interactions (two-way ANOVA with interaction)**
+
+Let's evaluate interactions through the interaction plot.
+
+```{r}
+ggplot(active_data,aes(group, hvltt2, fill=sex)) + 
+  stat_summary(aes(group = sex, lty = sex), fun = "mean",  geom = "line")+ labs(x = "Group", y = "Memory performance - Average", fill="Sex")  + scale_x_discrete(breaks=c("1", "2", "3", "4"), labels=c("Memory", "Reasoning", "Speed", "Control")) + scale_fill_discrete(breaks=c("1", "2"), labels=c("Male", "Female"))
+```
+
+The plot suggests "absence of interaction" (parallel lines).
+
+However, let's try (just as an example on how to going on) to add interactions in our model. 
+
+```{r}
+mod_int<-lm(hvltt2~group +sex+ group:sex,data=active_data)
+summary(mod_int)
+```
+which corresponds to evaluate the following model: 
+
+$$Y_i = \beta_1 + \beta_2 x_{i2}+ \beta_3 x_{i3} + \beta_4 x_{i4} + \beta_5 x_{i5} + \beta_6 x_{i2}*x_{i5}+ \beta_7 x_{i3}*x_{i5} + \beta_8 x_{i4}*x_{i5} + \epsilon_i$$
+
+From the output of our model, we can observe that the coefficients related to the interactions are no-significant.
