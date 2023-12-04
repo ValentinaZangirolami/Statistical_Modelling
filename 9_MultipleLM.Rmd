@@ -380,7 +380,7 @@ The estimated regression model corresponds to
 
 $$\widehat{Y}_i = 24.6908 - 1.5657 x_{i2} - 1.2290 x_{i3} - 1.8429 x_{i4} + 1.8019 x_{i5}$$
 
-where the averages for Group-Male are $\mu_{A-M} = 24.6908$, $\mu_{B-M} = 23.1251$, $\mu_{C-M} = 23.4618$, and $\mu_{D-M} = 22.8479$; the averages for Group-Female are $\mu_{A-F} = 26.4927$, $\mu_{B-F} = 24.927$, $\mu_{C-F} = 25.2637$, and $\mu_{D-F} = 24.6498$.
+where the averages for Group-Male are $\bar{y}_{A-M} = 24.6908$, $\bar{y}_{B-M} = 23.1251$, $\bar{y}_{C-M} = 23.4618$, and $\bar{y}_{D-M} = 22.8479$; the averages for Group-Female are $\bar{y}_{A-F} = 26.4927$, $\bar{y}_{B-F} = 24.927$, $\bar{y}_{C-F} = 25.2637$, and $\bar{y}_{D-F} = 24.6498$.
 
 Using the t-test for each regression coefficient, we can conclude that we reject $H_0$ (i.e. each coefficient is significant). 
 
