@@ -191,20 +191,6 @@ ggplot(pkmn, aes(x=Type, y= Total, color=Type)) +
 
 Water Pokémon reach higher Total points than Normal Pokémon. We can observe the minimum of Total points is lower for Water Pokémon. In general, Water Pokémon get higher Total points than Normal Pokémon.
 
-**Dependent variable vs Independent variable**
-
-```{r, include=TRUE}
-Scatter_Matrix <- GGally::ggpairs(pkmn,columns = c(2:5), 
-                          title = "Scatter Plot Matrix for Pokémon Dataset", 
-                          axisLabels = "show") 
-```
-
-```{r  echo=FALSE, results='hide', fig.keep='all', message = FALSE}
-Scatter_Matrix
-```
-
-Type vs other independent variables: no strong dependencies.
-
 Let's start by considering the following model
 
 $$Total_i = \beta_1 + \beta_2 Attack_i + \beta_3 D_i + \epsilon_i$$
@@ -321,23 +307,8 @@ The Advanced Cognitive Training for Independent and Vital Elderly (ACTIVE) trial
 
 -   *sex* is a binary variable: (1) Male, and (2) Female
 
-**Marginal relationship**
 
-```{r, include=TRUE}
-Scatter_Matrix <- GGally::ggpairs(active_data,columns = c(10,6,4), 
-                          title = "Scatter Plot Matrix for Active Dataset", 
-                          axisLabels = "show") 
-```
-
-```{r  echo=FALSE, results='hide', fig.keep='all', message = FALSE}
-Scatter_Matrix
-```
-
-```{r include=FALSE}
-rm(Scatter_Matrix)
-```
-
-**Combined plot**
+**Plot of our variables**
 
 ```{r}
 ggplot(active_data,  aes(x = factor(group), y = hvltt2, fill = factor(sex)))  + geom_bar(stat="identity", position = "dodge", width = 0.7) + labs(x = "Group", y = "Memory performance", fill="Sex")  + scale_x_discrete(breaks=c("1", "2", "3", "4"), labels=c("Memory", "Reasoning", "Speed", "Control")) + scale_fill_discrete(breaks=c("1", "2"), labels=c("Male", "Female"))
