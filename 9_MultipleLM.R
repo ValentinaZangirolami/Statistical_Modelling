@@ -49,11 +49,6 @@ theme_set(theme_bw())
 ggplot(pkmn, aes(x=Type, y= Total, color=Type)) + 
   geom_boxplot(outlier.colour="black", outlier.shape=8, outlier.size=4)
 
-#marginal relationship among variables
-
-GGally::ggpairs(pkmn,columns = c(2:5), 
-                title = "Scatter Plot Matrix for Pokémon Dataset", 
-                axisLabels = "show") 
 
 #model
 mod_anc_1 <- lm(Total~Attack +Type, data=pkmn)
@@ -85,12 +80,7 @@ head(active_data)
 active_data$sex <- as.factor(active_data$sex)
 active_data$group <- as.factor(active_data$group)
 
-#marginal relationship among variables
-GGally::ggpairs(active_data,columns = c(10,6,4), 
-                title = "Scatter Plot Matrix for Active Dataset", 
-                axisLabels = "show") 
-
-#Combined plot
+#Total vs covariates
 ggplot(active_data,  aes(x = factor(group), y = hvltt2, fill = factor(sex)))  + geom_bar(stat="identity", position = "dodge", width = 0.7) + labs(x = "Group", y = "Memory performance", fill="Sex")  + scale_x_discrete(breaks=c("1", "2", "3", "4"), labels=c("Memory", "Reasoning", "Speed", "Control")) + scale_fill_discrete(breaks=c("1", "2"), labels=c("Male", "Female"))
 
 #model
