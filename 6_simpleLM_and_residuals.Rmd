@@ -246,14 +246,17 @@ plot(x,residuals(lm(y3~x)),xlab="X",ylab="residuals")
 plot(x,residuals(lm(y4~x)),xlab="X",ylab="residuals")
 ```
 
-These plots highlight some issues with the Gaussian assumption of the errors. Let's also check the QQ-plot for the firsts two plot (just for an example).
+These plots highlight some issues with the Gaussian assumption of the errors. Let's also check the QQ-plot and histogram of residuals for the firsts two plot (just for an example).
 
 ```{r, include=TRUE}
 qqnorm(residuals(lm(y1~x)), pch = 1, frame = FALSE)
 qqline(residuals(lm(y1~x)), col = "steelblue", lwd = 2)
+hist(residuals(lm(y1~x)),main="Histogram",xlab="residuals", breaks=seq(min(residuals(lm(y1~x))),max(residuals(lm(y1~x))),length=10),ylab="")
 
 qqnorm(residuals(lm(y2~x)), pch = 1, frame = FALSE)
 qqline(residuals(lm(y2~x)), col = "steelblue", lwd = 2)
+hist(residuals(lm(y2~x)),main="Histogram",xlab="residuals",
+breaks=seq(min(residuals(lm(y2~x))),max(residuals(lm(y2~x))),length=10),ylab="")
 ```
 
 Let assume that we don't know anything about the data generative mechanism, what can we do?
@@ -262,7 +265,11 @@ A way could be to transform our dependent variable, for instance:
 ```{r, include=TRUE}
 qqnorm(residuals(lm(log(y2)~x)), pch = 1, frame = FALSE)
 qqline(residuals(lm(log(y2)~x)), col = "steelblue", lwd = 2)
+hist(residuals(lm(log(y2)~x)),main="Histogram",xlab="residuals",
+breaks=seq(min(residuals(lm(log(y2)~x))),max(residuals(lm(log(y2)~x))),length=10),ylab="")
 
 qqnorm(residuals(lm(sqrt(y2)~x)), pch = 1, frame = FALSE)
 qqline(residuals(lm(sqrt(y2)~x)), col = "steelblue", lwd = 2)
+hist(residuals(lm(sqrt(y2)~x)),main="Histogram",xlab="residuals",
+breaks=seq(min(residuals(lm(sqrt(y2)~x))),max(residuals(lm(sqrt(y2)~x))),length=10),ylab="")
 ```

@@ -1,0 +1,463 @@
+---
+title: "Generalized Linear Model"
+author: "Valentina Zangirolami"
+date: "2024-01-09"
+output: html_document
+---
+
+```{r warning=FALSE}
+#load libraries
+library(car)
+library(ggplot2)
+```
+
+**Logistic regression**
+
+```{r}
+icu <- read.csv("ICU.csv")
+head(icu)
+```
+
+ICU Dataset contains data about 200 patients admitted at the Intensive Care Unit (ICU), with the following variables:
+
+-   *stato* means patient status, which is a binary variable: 0 (Alive) and 1 (Dead)
+
+-   *eta* means patient age
+
+-   *causa* means the reason of the hospitalization: 0 (planned) and 1 (emergency)
+
+-   *coscienza* means the level of consciousness: 0 (no coma) and 1 (coma)
+
+**Plot of the Dependent variable**
+
+In this case, can the variable *status* be normally distributed?
+
+Let's check
+
+```{r}
+hist(icu$stato,prob=T, xlim=c(-1,1), main= "Histogram of Status")
+curve(dnorm(x,mean(icu$stato), sd(icu$stato)),add=T, col=2)
+
+qqnorm(icu$stato)
+```
+
+Of course, no. We can assume
+
+$$Status_i \overset{\perp\!\!\!\!\perp}{\sim} Bernoulli(\pi_i)$$
+
+and, then,
+
+$$g(\pi_i) = \beta_1 + \beta_2 Age_i + \beta_3 D_{1i} + \beta_4 D_{2i},$$ where
+
+$$D_{1i} = \begin{cases} 1, \mbox{ if } Causa_i = 1\\ 0, \mbox{ otherwise}\end{cases} \quad \quad D_{2i} = \begin{cases} 1, \mbox{ if } Consciousness_i = 1\\ 0, \mbox{ otherwise}\end{cases}$$
+
+Let's check the plot of our Dependent variable
+
+```{r, include=FALSE}
+icu$stato <- as.factor(icu$stato)
+icu$causa <- as.factor(icu$causa)
+icu$coscienza <- as.factor(icu$coscienza)
+```
+
+```{r}
+ggplot(data=icu, aes(x=stato)) +
+  geom_bar(fill="pink") + labs(x = "Status") +
+  theme_minimal()
+```
+
+We can observe that our dependent variable is unbalanced. How try to solve this issue is beyond the scope of this course, for this reason we won't talk about unbalanced classes.
+
+**Our goal**: We would like to use Generalized linear model to study the probability of death.
+
+**Grouped data**
+
+To make easier the transformation to grouped data, we can modify the variable *Age* as
+
+$$D_{3i} = \begin{cases} 1, \mbox{ if } Age_i > 70\\ 0, \mbox{ otherwise}\end{cases}$$
+
+```{r}
+icu$cleta <- ifelse(icu$eta < 70, 0, 1)
+```
+
+Now, we need to find the number of deaths and alive for all the combinations of our explanatory variables and then build our new dataset.
+
+```{r}
+table(icu$stato[which(icu$cleta==0 & icu$causa == 0 & icu$coscienza == 0)])
+table(icu$stato[which(icu$cleta==0 & icu$causa == 0 & icu$coscienza == 1)])
+table(icu$stato[which(icu$cleta==0 & icu$causa == 1 & icu$coscienza == 0)])
+table(icu$stato[which(icu$cleta==0 & icu$causa == 1 & icu$coscienza == 1)])
+table(icu$stato[which(icu$cleta==1 & icu$causa == 0 & icu$coscienza == 0)])
+table(icu$stato[which(icu$cleta==1 & icu$causa == 0 & icu$coscienza == 1)])
+table(icu$stato[which(icu$cleta==1 & icu$causa == 1 & icu$coscienza == 0)])
+table(icu$stato[which(icu$cleta==1 & icu$causa == 1 & icu$coscienza == 1)])
+```
+
+```{r}
+ICU.binomial <- data.frame(cleta=c(0,0,0,0,1,1,1,1),
+                         causa=c(0,0,1,1,0,0,1,1),
+                         coscienza=c(0,1,0,1,0,1,0,1),
+                         morti=c(0,0,9,13,0,5,7,6),
+                         ni=c(25,6,73,32,15,10,28,11))
+```
+
+**Logit model with grouped data**
+
+Assumptions:
+
+-   $Status_i \sim Binomial (\pi_i)$
+
+-   $\log(\frac{\pi_i}{1- \pi_i}) = \beta_1 + \beta_2 D_{3i} + \beta_3 D_{1i} + \beta_4 D_{2i}$
+
+```{r}
+mod_glm <- glm(I(morti/ni) ~ cleta + causa + coscienza, family="binomial", weights = ni, data=ICU.binomial)
+summary(mod_glm)
+```
+
+From the output, we can find the estimates of our regression coefficients: $\hat{\beta}_1 = -3.7845$, $\hat{\beta}_2 = 1.0489$, $\hat{\beta}_3 = 1.6285$ and $\hat{\beta}_4 = 1.7955$ and the standard errors: $SE(\hat{\beta}_1) = 0.6530$, $SE(\hat{\beta}_2) = 0.4180$, $SE(\hat{\beta}_3) = 0.5696$ and $SE(\hat{\beta}_4) = 0.3990$.
+
+*Test about significance*
+
+Let consider the generic system of hypothesis as
+
+$$\begin{cases}H_0 : \beta_r = 0\\ H_1: \beta_r \ne 0 \end{cases}$$
+
+where $r \in \{1,2,3,4\}$.
+
+The related test statistic corresponds to
+
+$$Z_r = \frac{\hat{\beta}_r - \beta_r}{SE(\hat{\beta}_r)} \overset{H_0}{\sim} N(0,1)$$
+
+(and in this case $\beta_r$=0 under the null hypothesis)
+
+Therefore the observed test statistics for each coefficient are: $z^{obs}_1 = -5.796$, $z^{obs}_2 = 2.509$, $z^{obs}_3 = 2.859$ and $z^{obs}_4 = 4.500$.
+
+The related p-value corresponds to
+
+$$\alpha^{obs}_r = \mathbb{P}_{H_0}(|Z_r|\ge |z^{obs}_r|),$$
+
+and for each coefficient we obtained $\alpha_1^{obs}=6.81e-09$, $\alpha_2^{obs}=0.01210$, $\alpha_3^{obs}=0.00425$ and $\alpha_4^{obs}=6.79e-06$.
+
+-   We reject the null hypothesis $H_0: \beta_1 = 0$, $H_0: \beta_3 = 0$ and $H_0: \beta_4 = 0$ at 1%, 5% and 10% significance levels.
+
+-   We reject the null hypothesis $H_0: \beta_2 = 0$ at 5% and 10% significance levels.
+
+The *null deviance* corresponds to the deviance of the null model and the *residual deviance* corresponds to the deviance of our model.
+
+We know that the following relationship holds
+
+$$D(null) = 2\{\tilde{l}(saturated) - \hat{l}(null)\}$$
+
+and the degree of freedom of the null deviance corresponds to $n-p_0 = 8 -1 = 7$ (The saturated model has n coefficients and the null model has 1 coefficient).
+
+Instead, in the case of *residual deviance* we know
+
+$$D(model) = 2\{\tilde{l}(saturated) - \hat{l}(model)\},$$ hence the degree of freedom of the residual deviance corresponds to $n-p = 8 -4 = 4$.
+
+The *residual deviance* is equal to 7.6479 and it is greater than $n-p= 4$, hence our model is not good enough.
+
+**ODDS RATIO**
+
+The odds ratio for the variable *Age* is
+
+$$ \frac{\left( \frac{\pi_i}{1-\pi_i} \bigg| Age_i = x_0 + 1\right)}{\left( \frac{\pi_i}{1-\pi_i} \bigg| Age_i = x_0 \right)} = e^{\beta_2},$$ which is equal to
+
+```{r}
+exp(coefficients(mod_glm)[2])
+```
+
+The odds ratio for those in the highest age group (keeping constant the other explanatory variables), is 2.85 times that of those younger than 70 years. This means that age is a risk factor for death.
+
+The odds ratio for the variable *Causa* is
+
+$$ \frac{\left( \frac{\pi_i}{1-\pi_i} \bigg| Causa_i = x_0 + 1\right)}{\left( \frac{\pi_i}{1-\pi_i} \bigg| Causa_i = x_0 \right)} = e^{\beta_3},$$ which is equal to
+
+```{r}
+exp(coefficients(mod_glm)[3])
+```
+
+The odds ratio of those who have an emergency ICU admission are about 5 times higher than those who have a planned admission, given the same age and consciousness. So even the variable *Causa* represents a risk factor for death.
+
+**TEST ABOUT THE OVERALL SIGNIFICANCE**
+
+Let consider the following system of hypothesis
+
+$$\begin{cases} H_0: \beta_2 = \beta_3 = \beta_4 = 0\\ 
+H_1: \bar{H_0}\end{cases}$$
+
+We need to estimate the null model as follows
+
+```{r}
+mod_0 <- glm(I(morti/ni) ~ 1, family="binomial", weights = ni, data=ICU.binomial)
+summary(mod_0)
+```
+
+The test statistic can be written as
+
+$$W = 2(\hat{l}(model) - \tilde{l}(null)) \overset{H_0}{\sim} \mathcal{X}_{p-1},$$
+
+where the observed value is equal to
+
+```{r}
+(W <- 2*(as.numeric(logLik(mod_glm)) - as.numeric(logLik(mod_0))))
+```
+
+Then, the pvalue
+
+$$\alpha^{obs} = \mathbb{P}(W > w^{obs})$$ is equal to
+
+```{r}
+1-pchisq(W,3)
+```
+
+We can reject $H_0$ at 1% significance level.
+
+**Evaluating the predictions**
+
+Let assume that we consider a patient to be "death" when the estimated probability is greater than 0.5.
+
+```{r}
+(predicted <- ifelse(as.numeric(mod_glm$fitted.values) >= 0.5, ICU.binomial$ni, 0))
+ICU.binomial$morti
+```
+
+Then, we can compute the quantities to build a confusion matrix (True Positive, False Positive, True Negative, False Negative).
+
+```{r}
+(true_positive<- sum(ICU.binomial$morti[predicted != 0]))
+(false_positive <- sum(ICU.binomial$ni[predicted != 0]) - sum(ICU.binomial$morti[predicted!= 0]))
+```
+
+```{r}
+(true_negative <- 160 - false_positive)
+(false_negative <- 40 - true_positive)
+```
+
+Hence, the confusion matrix corresponds to
+
+| Predicted \\ True values | Dead | Alive |
+|--------------------------|------|-------|
+| **Dead**                 | 6    | 5     |
+| **Alive**                | 34   | 155   |
+
+Accuracy:
+
+```{r}
+(6 + 155)/(6+155+5+34)
+```
+The value of accuracy is really high, around 80.5%. This means that overall our model is good enough. However, in this case, we are interested in assessing whether the model predicts both classes well. In particular, we would like to understand  whether the model can be used to have a good prediction of the "positive" class (deaths).
+
+For this purpose, we can evaluate the sensibility and the specificity.
+
+Sensibility:
+
+```{r}
+6/(6+34)
+```
+
+Specificity:
+
+```{r}
+155/(155+5)
+```
+
+The model predicts very well the negative class (alive), indeed the specificity is around 96.88%. However, the positive class is predicted correctly by only 15%. This problem can be related to the presence of unbalanced classes. 
+
+**Poisson regression**
+
+```{r}
+crabs <- read.csv("Granchi.csv")
+head(crabs)
+```
+
+Crabs Dataset contains data about 173 female crabs with the following variables:
+
+-   *Satellites* refers to the number of male partners in addition to the primary partner
+
+-   *Width* is the width of the crab in centimeters
+
+-   *Dark* is a binary variable: 0 (no dark crab) and 1 (dark crab)
+
+-   *GoodSpine* refers to the crab shell defects: 0 (no) and 1 (yes)
+
+**Plot of the Dependent variable**
+
+In this case, can the variable *Satellites* be normally distributed?
+
+Let's check
+
+```{r}
+hist(crabs$Satellites,prob=T,xlim=c(-3,18), main= "Histogram of Satellites")
+curve(dnorm(x,mean(crabs$Satellites),sd(crabs$Satellites)),col=2, add=T)
+
+qqnorm(crabs$Satellites)
+```
+
+Satellites' support, due to the nature of the variable, is the non-negative integers instead of all reals. Looking at the plot, it does not seem to show a normal distribution (the histogram has obvious skewness and the q-q plot has a stepped shape), with a very anomalous trend on the left thing (due to the difference between the sample and theoretical support).
+
+**Data Exploration**
+
+```{r}
+theme_set(theme_bw()) 
+ggplot(data = crabs, aes(x=Width, y=Satellites)) + geom_point( alpha = 0.5, aes(color= factor(Dark))) + labs(x="Crabs' Width", y="Satellites", color="Dark", title = "Plot Satellites vs Width & Dark")
+```
+
+There does not seem to be much difference of the effect of Width on Satellites stratified by Dark. However, the plot is not very clear.
+
+```{r}
+theme_set(theme_bw()) 
+ggplot(data = crabs, aes(x=Width, y=Satellites)) + geom_point( alpha = 0.5, aes(color= factor(GoodSpine))) + labs(x="Crabs' Width", y="Satellites", color="GoodSpine", title = "Plot Satellites vs Width & GoodSpine")
+```
+
+Even in this case, there does not seem to be much difference of the effect of Width on Satellites stratified by GoodSpine. However, the plot is not very clear.
+
+**Poisson model**
+
+Assumptions:
+
+- $Satellites_i \overset{\perp\!\!\!\!\perp}{\sim} Poisson(\mu_i)$
+
+- $log(\mu_i) = \beta_1 + \beta_2 Width_i + \beta_3 D_{1i}+ \beta_4 D_{2i}$,
+
+where $$D_{1i} = \begin{cases} 1, \mbox{ if } Dark_i = 1\\ 0, \mbox{ otherwise}\end{cases} \quad \quad D_{2i} = \begin{cases} 1, \mbox{ if } GoodSpine_i = 1\\ 0, \mbox{ otherwise}\end{cases}$$
+
+
+Let's check if the Poisson assumption can be reasonable
+
+```{r}
+# Graficamente:
+tab <- xtabs(~crabs$Satellites)
+par(mfrow=c(1,2))
+ascisse<-as.numeric(names(tab))
+
+# Empirical distribution
+plot(ascisse,tab,type="h",xlab="Number of Satellites",ylab="Frequence", main = "Empirical distribution")
+points(ascisse,tab,pch=16)
+
+# Theoretical distribution
+media<-mean(crabs$Satellites)
+camp <-rpois(1000,media)
+tab.camp<-xtabs(~camp)
+ascisse.camp<-as.numeric(names(tab.camp))
+plot(ascisse.camp,tab.camp,type="h",xlab="Number of Satellites",ylab="Frequence",main = "Theoretical distribution")
+points(ascisse.camp,tab.camp,pch=16)
+par(mfrow=c(1,1))
+```
+
+```{r}
+qqPlot(crabs$Satellites,distribution="pois",lambda=mean(crabs$Satellites))
+```
+
+Although most of the points are within the confidence bands in the qqplot, the empirical and theoretical distributions seem to differ considerably.
+
+```{r}
+mod_glm <- glm(Satellites ~ Width + Dark + GoodSpine, family=poisson, data=crabs)
+summary(mod_glm)
+```
+
+From the output, we can find the estimates of our regression coefficients: $\hat{\beta}_1 = -2.820088$, $\hat{\beta}_2 = 0.149196$, $\hat{\beta}_3 = -0.265665$ and $\hat{\beta}_4 = -0.002041$ and the standard errors: $SE(\hat{\beta}_1) = 0.570859$, $SE(\hat{\beta}_2) = 0.020753$, $SE(\hat{\beta}_3) = 0.104972$ and $SE(\hat{\beta}_4) = 0.097990$.
+
+*Interpretation of regression coefficients*: 
+
+-  Width:
+
+```{r}
+exp(coefficients(mod_glm)[2])
+```
+If the Width of the crabs increases by one unit, the average of Satellites increases by 16% (keeping the other explanatory variables constant).
+
+-  Dark:
+
+```{r}
+exp(coefficients(mod_glm)[3])
+```
+When the color of the crabs changes from no dark to dark, the change in the mean response given all other covariates held constant is $\approx 0.77$, hence a decrease of 23% of the average number of male partners.
+
+
+-  GoodSpline:
+
+```{r}
+exp(coefficients(mod_glm)[4])
+```
+When crabs shell changes from no defect to defect, the change in the mean response given all other covariates held constant is $\approx 1$.
+
+
+*Test about significance*
+
+Let consider the generic system of hypothesis as
+
+$$\begin{cases}H_0 : \beta_r = 0\\ H_1: \beta_r \ne 0 \end{cases}$$
+
+where $r \in \{1,2,3,4\}$.
+
+The related test statistic corresponds to
+
+$$Z_r = \frac{\hat{\beta}_r - \beta_r}{SE(\hat{\beta}_r)} \overset{H_0}{\sim} N(0,1)$$
+
+(and in this case $\beta_r$=0 under the null hypothesis)
+
+Therefore the observed test statistics for each coefficient are: $z^{obs}_1 = -4.940$, $z^{obs}_2 = 7.189$, $z^{obs}_3 = -2.531$ and $z^{obs}_4 = -0.021$.
+
+The related p-value corresponds to
+
+$$\alpha^{obs}_r = \mathbb{P}_{H_0}(|Z_r|\ge |z^{obs}_r|),$$
+
+and for each coefficient we obtained $\alpha_1^{obs}=7.81e-07$, $\alpha_2^{obs}=6.52e-13$, $\alpha_3^{obs}=0.0114$ and $\alpha_4^{obs}=0.9834$.
+
+-   We cannot reject the null hypothesis $H_0: \beta_4 = 0$, this means the coefficient is not significant.
+
+-   We reject $H_0: \beta_1 = 0$, $H_0: \beta_2 = 0$ at 1%, 5% and 10$ significance levels.
+
+-   We reject $H_0: \beta_3 = 0$ at 5% and 10$ significance levels.
+
+The *null deviance* corresponds to the deviance of the null model and the *residual deviance* corresponds to the deviance of our model.
+
+We know that the following relationship holds
+
+$$D(null) = 2\{\tilde{l}(saturated) - \hat{l}(null)\}$$
+
+and the degree of freedom of the null deviance corresponds to $n-p_0 = 173 -1 = 172$ (The saturated model has n coefficients and the null model has 1 coefficient).
+
+Instead, in the case of *residual deviance* we know
+
+$$D(model) = 2\{\tilde{l}(saturated) - \hat{l}(model)\},$$ hence the degree of freedom of the residual deviance corresponds to $n-p = 173 -4 = 169$.
+
+The *residual deviance* is equal to 560.96 and it is greater than $n-p= 169$, hence our model is not good enough.
+
+**TEST ABOUT THE OVERALL SIGNIFICANCE**
+
+Let consider the following system of hypothesis
+
+$$\begin{cases} H_0: \beta_2 = \beta_3 = \beta_4 = 0\\ 
+H_1: \bar{H_0}\end{cases}$$
+
+We need to estimate the null model as follows
+
+```{r}
+mod_0 <- glm(Satellites ~ 1, family=poisson, data=crabs)
+summary(mod_0)
+```
+
+The test statistic can be written as
+
+$$W = 2(\hat{l}(model) - \tilde{l}(null)) \overset{H_0}{\sim} \mathcal{X}_{p-1},$$
+
+where $p-1=3$ and the observed value is equal to
+
+```{r}
+(W <- 2*(as.numeric(logLik(mod_glm)) - as.numeric(logLik(mod_0))))
+```
+
+Then, the pvalue
+
+$$\alpha^{obs} = \mathbb{P}(W > w^{obs})$$ is equal to
+
+```{r}
+1-pchisq(W,3)
+```
+
+We can reject $H_0$ at 1% significance level. We can obtain the same result using the following:
+
+```{r}
+anova(mod_0,mod_glm,test="Chisq")
+```
+
